@@ -1,0 +1,20 @@
+# Render deployment config
+# Free plan: data is stored in the repo dir (lost on redeploys - OK for testing)
+# Paid plan ($7/mo): uncomment the disk section + set DATA_DIR for permanent storage
+services:
+  - type: web
+    name: offline-ai-license-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # For paid plan with disk, also set:
+      # - key: DATA_DIR
+      #   value: /data
+    # disk:
+    #   name: license-data
+    #   mountPath: /data
+    #   sizeGB: 1

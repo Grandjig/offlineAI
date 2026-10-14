@@ -1,0 +1,6 @@
+{
+  "admin_password": "ChangeThisToYourAdminPassword123",
+  "trial_days": 14,
+  "license_file": "licenses.json",
+  "port": 3000
+}

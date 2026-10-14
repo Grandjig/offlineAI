@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Offline AI — License Manager</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e;
+          --accent:#58a6ff; --green:#3fb950; --red:#f85149; --yellow:#d29922; --orange:#db6d28; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  .container { max-width:1280px; margin:0 auto; padding:24px; }
+  h1 { font-size:22px; font-weight:600; }
+  h2 { font-size:13px; font-weight:600; margin-bottom:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+  .hidden { display:none !important; }
+  #loginView { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .login-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:36px; width:380px; text-align:center; }
+  .login-card h1 { margin-bottom:6px; }
+  .login-card p { color:var(--muted); font-size:13px; margin-bottom:20px; }
+  .login-card input { width:100%; margin-bottom:12px; }
+  .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
+  .header .actions { display:flex; gap:8px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
+  .stat { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .stat .num { font-size:28px; font-weight:700; }
+  .stat .lbl { font-size:12px; color:var(--muted); margin-top:2px; }
+  .stat.green .num { color:var(--green); } .stat.yellow .num { color:var(--yellow); }
+  .stat.red .num { color:var(--red); } .stat.blue .num { color:var(--accent); }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px; }
+  input,select { background:var(--bg); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:6px; font-size:14px; width:100%; }
+  input:focus { outline:none; border-color:var(--accent); }
+  .form-row { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .form-row input { flex:1; min-width:160px; }
+  button { background:#21262d; color:var(--text); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-size:13px; cursor:pointer; white-space:nowrap; }
+  button:hover { background:#30363d; }
+  button.primary { background:#238636; border-color:#2ea043; color:#fff; }
+  button.primary:hover { background:#2ea043; }
+  button.danger { background:#b62324; border-color:#da3633; color:#fff; }
+  button.danger:hover { background:#da3633; }
+  button.small { padding:4px 10px; font-size:12px; }
+  .table-wrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; padding:10px 12px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--border); font-size:12px; }
+  td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(88,166,255,.04); }
+  code { background:var(--bg); padding:2px 6px; border-radius:4px; font-size:12px; cursor:pointer; }
+  .badge { padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge.trial { background:rgba(210,153,34,.15); color:var(--yellow); }
+  .badge.paid { background:rgba(63,185,80,.15); color:var(--green); }
+  .badge.expired { background:rgba(248,81,73,.15); color:var(--red); }
+  .badge.revoked { background:rgba(248,81,73,.25); color:var(--red); }
+  .activity-item { display:flex; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .activity-item:last-child { border-bottom:none; }
+  .activity-item .time { color:var(--muted); white-space:nowrap; font-size:12px; }
+  .dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .dot.allow { background:var(--green); } .dot.deny { background:var(--red); }
+  .dot.trial { background:var(--yellow); } .dot.admin { background:var(--accent); }
+  .dot.blocked { background:var(--orange); } .dot.register { background:var(--accent); }
+  #toast { position:fixed; bottom:24px; right:24px; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 18px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:99; }
+  #toast.show { opacity:1; }
+  #toast.ok { border-color:var(--green); } #toast.err { border-color:var(--red); }
+  .grid-2 { display:grid; grid-template-columns:2fr 1fr; gap:20px; }
+  @media (max-width:900px) { .grid-2 { grid-template-columns:1fr; } }
+  .muted { color:var(--muted); font-size:12px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginView">
+  <div class="login-card">
+    <h1>🛡️ Offline AI</h1>
+    <p>License Manager</p>
+    <input type="password" id="pwInput" placeholder="Admin password" onkeydown="if(event.key==='Enter')login()">
+    <button class="primary" style="width:100%" onclick="login()">Sign in</button>
+    <p id="loginErr" class="hidden" style="color:var(--red);margin-top:10px">Wrong password</p>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="mainView" class="hidden">
+  <div class="container">
+    <div class="header">
+      <h1>🛡️ Offline AI — License Manager</h1>
+      <div class="actions">
+        <button onclick="exportBackup()">⬇️ Backup</button>
+        <button onclick="logout()">Sign out</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat blue"><div class="num" id="stTotal">0</div><div class="lbl">Total licenses</div></div>
+      <div class="stat yellow"><div class="num" id="stTrials">0</div><div class="lbl">Active trials</div></div>
+      <div class="stat red"><div class="num" id="stExpired">0</div><div class="lbl">Expired</div></div>
+      <div class="stat green"><div class="num" id="stPaid">0</div><div class="lbl">Paid</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="card">
+          <h2>🔑 Licenses</h2>
+          <div class="form-row">
+            <input id="searchBox" placeholder="🔍 Search key, customer, email…" oninput="renderLicenses()">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Key</th><th>Customer</th><th>Status</th><th>Expires</th><th>Last seen</th><th>Actions</th>
+              </tr></thead>
+              <tbody id="licTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>➕ New trial</h2>
+          <input id="newCustomer" placeholder="Customer name" style="margin-bottom:8px">
+          <input id="newEmail" placeholder="Email (optional)" style="margin-bottom:10px">
+          <button class="primary" style="width:100%" onclick="createTrial()">Create trial license</button>
+        </div>
+        <div class="card">
+          <h2>📋 Activity</h2>
+          <div id="activityList" style="max-height:400px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let TOKEN = sessionStorage.getItem('aiAdminToken') || '';
+let LICENSES = {};
+
+const SERVER = location.origin;
+const api = (path, opts = {}) => fetch(SERVER + path, {
+  ...opts,
+  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN, ...(opts.headers || {}) }
+});
+
+function toast(msg, ok = true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (ok ? 'ok' : 'err');
+  setTimeout(() => t.className = '', 3000);
+}
+
+async function login() {
+  const pw = document.getElementById('pwInput').value;
+  if (!pw) return;
+  const res = await fetch(SERVER + '/admin/licenses', { headers: { 'Authorization': 'Bearer ' + pw } });
+  if (res.ok) {
+    TOKEN = pw;
+    sessionStorage.setItem('aiAdminToken', pw);
+    document.getElementById('loginView').classList.add('hidden');
+    document.getElementById('mainView').classList.remove('hidden');
+    refresh();
+  } else {
+    document.getElementById('loginErr').classList.remove('hidden');
+  }
+}
+
+function logout() {
+  TOKEN = '';
+  sessionStorage.removeItem('aiAdminToken');
+  document.getElementById('mainView').classList.add('hidden');
+  document.getElementById('loginView').classList.remove('hidden');
+}
+
+async function refresh() {
+  if (!TOKEN) return;
+  try {
+    const [licRes, actRes] = await Promise.all([api('/admin/licenses'), api('/admin/activity')]);
+    if (licRes.status === 401) { logout(); return; }
+    LICENSES = await licRes.json();
+    renderStats();
+    renderLicenses();
+    renderActivity(await actRes.json());
+  } catch (e) { console.error(e); }
+}
+
+function renderStats() {
+  const all = Object.values(LICENSES);
+  document.getElementById('stTotal').textContent = all.length;
+  document.getElementById('stTrials').textContent = all.filter(l => l.status === 'trial').length;
+  document.getElementById('stExpired').textContent = all.filter(l => l.status === 'expired').length;
+  document.getElementById('stPaid').textContent = all.filter(l => l.status === 'paid').length;
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const diff = (new Date(d) - new Date()) / 86400000;
+  const days = Math.ceil(diff);
+  let extra = '';
+  if (days > 0 && days <= 3) extra = ` <span style="color:var(--yellow)">(${days}d left)</span>`;
+  else if (days <= 0) extra = ' <span style="color:var(--red)">(gone)</span>';
+  return esc(d) + extra;
+}
+
+function fmtSeen(d) {
+  if (!d) return '<span class="muted">never</span>';
+  const hrs = (Date.now() - new Date(d)) / 3600000;
+  if (hrs < 1) return '<span style="color:var(--green)">just now</span>';
+  if (hrs < 24) return Math.round(hrs) + 'h ago';
+  return Math.round(hrs / 24) + 'd ago';
+}
+
+function renderLicenses() {
+  const q = (document.getElementById('searchBox').value || '').toLowerCase();
+  const tbody = document.getElementById('licTable');
+  tbody.innerHTML = '';
+
+  const entries = Object.entries(LICENSES).filter(([key, l]) =>
+    !q || key.toLowerCase().includes(q) || (l.customer || '').toLowerCase().includes(q) || (l.email || '').toLowerCase().includes(q)
+  );
+
+  if (entries.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">No licenses yet. Create a trial to get started.</td></tr>';
+    return;
+  }
+
+  for (const [key, l] of entries) {
+    const tr = document.createElement('tr');
+    const actions = [];
+    if (l.status === 'paid') {
+      actions.push(`<button class="small" onclick="markUnpaid('${key}')">Mark unpaid</button>`);
+    } else if (l.status === 'trial') {
+      actions.push(`<button class="small primary" onclick="markPaid('${key}')">Mark paid</button>`);
+      actions.push(`<button class="small" onclick="extend('${key}')">+14d</button>`);
+    } else if (l.status === 'expired') {
+      actions.push(`<button class="small primary" onclick="markPaid('${key}')">Mark paid</button>`);
+      actions.push(`<button class="small" onclick="extend('${key}')">+14d</button>`);
+    } else if (l.status === 'revoked') {
+      actions.push(`<button class="small primary" onclick="unrevoke('${key}')">Restore</button>`);
+    }
+    actions.push(`<button class="small danger" onclick="del('${key}')">Delete</button>`);
+
+    tr.innerHTML = `
+      <td><code onclick="navigator.clipboard.writeText('${key}')" title="Click to copy">${key.slice(0,14)}…</code></td>
+      <td>${esc(l.customer)}${l.email ? '<br><span class="muted">' + esc(l.email) + '</span>' : ''}</td>
+      <td><span class="badge ${l.status}">${l.status}</span></td>
+      <td>${l.status === 'paid' ? '<span class="muted">never</span>' : fmtDate(l.expires)}</td>
+      <td>${fmtSeen(l.lastSeen)}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">${actions.join('')}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderActivity(events) {
+  const el = document.getElementById('activityList');
+  if (!events || events.length === 0) {
+    el.innerHTML = '<p class="muted">No activity yet.</p>';
+    return;
+  }
+  el.innerHTML = events.map(e => `
+    <div class="activity-item">
+      <div class="dot ${esc(e.type)}"></div>
+      <div>
+        <div>${esc(e.detail)}</div>
+        <div class="time">${new Date(e.time).toLocaleString()}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ---- Actions ----
+async function act(path, body, okMsg) {
+  const res = await api(path, { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  toast(okMsg, data.success !== false);
+  refresh();
+}
+
+const markPaid = (k) => act('/admin/update', { licenseKey: k, updates: { paid: true, status: 'paid' } }, 'Marked as paid ✓');
+const markUnpaid = (k) => act('/admin/update', { licenseKey: k, updates: { paid: false, status: 'trial' } }, 'Marked as trial');
+const extend = (k) => {
+  const d = new Date(); d.setDate(d.getDate() + 14);
+  act('/admin/update', { licenseKey: k, updates: { expires: d.toISOString().split('T')[0], status: 'trial', paid: false } }, 'Extended 14 days ✓');
+};
+const unrevoke = (k) => act('/admin/revoke', { licenseKey: k, revoke: false }, 'License restored ✓');
+
+function del(k) {
+  if (!confirm('Delete ' + k + '?\n\nThe customer will be blocked on next launch. Their machine can also sign up for a NEW trial afterwards.')) return;
+  act('/admin/delete', { licenseKey: k }, 'License deleted');
+}
+
+async function createTrial() {
+  const customer = document.getElementById('newCustomer').value;
+  const email = document.getElementById('newEmail').value;
+  if (!customer.trim()) { toast('Enter a customer name', false); return; }
+  const res = await api('/api/create-trial', { method: 'POST', body: JSON.stringify({ customer, email }) });
+  const data = await res.json();
+  if (data.success) {
+    toast('Created: ' + data.licenseKey, true);
+    document.getElementById('newCustomer').value = '';
+    document.getElementById('newEmail').value = '';
+    navigator.clipboard.writeText(data.licenseKey);
+    refresh();
+  } else toast('Error creating trial', false);
+}
+
+function exportBackup() {
+  fetch(SERVER + '/admin/backup', { headers: { 'Authorization': 'Bearer ' + TOKEN } })
+    .then(r => r.blob())
+    .then(b => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'license_backup.json';
+      a.click();
+      toast('Backup downloaded ✓');
+    });
+}
+
+// Auto-refresh every 20s
+setInterval(refresh, 20000);
+
+// If token exists, skip login
+if (TOKEN) {
+  document.getElementById('loginView').classList.add('hidden');
+  document.getElementById('mainView').classList.remove('hidden');
+  refresh();
+}
+</script>
+</body>
+</html>
+
