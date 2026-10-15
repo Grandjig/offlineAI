@@ -1,19 +1,57 @@
-# Render deployment config
-# Free plan: data is stored in the repo dir (lost on redeploys - OK for testing)
-# Paid plan ($7/mo): uncomment the disk section + set DATA_DIR for permanent storage
+# Render deployment for the Offline AI licence server.
+#
+# IMPORTANT - read this before you deploy:
+#
+#   The free plan has NO permanent disk. Every restart or redeploy wipes
+#   licenses.json, which means every customer loses their licence. The free
+#   plan also spins down after 15 minutes idle, so this happens often.
+#
+#   For real customers you need the paid plan (~$7/mo) with the disk below
+#   uncommented and DATA_DIR=/data set. Until then, use the "Download backup"
+#   button in the dashboard regularly and "Restore backup" to recover.
+#
 services:
   - type: web
     name: offline-ai-license-server
     runtime: node
-    plan: free
+    plan: free                 # change to "starter" once you have customers
     buildCommand: npm install
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
         value: production
-      # For paid plan with disk, also set:
+
+      # Set your own password here (Render prompts you for it on first deploy).
+      # The server prefers this over config.json, so your real password never
+      # needs to live in git.
+      - key: ADMIN_PASSWORD
+        sync: false
+
+      # Length of the free trial, in days.
+      - key: TRIAL_DAYS
+        value: "14"
+
+      # One key, one computer. Set to "false" to let a key work anywhere.
+      - key: DEVICE_LOCK
+        value: "true"
+
+      # How long a customer keeps working while offline, and how quickly a
+      # switched-off licence takes effect while they are online.
+      - key: OFFLINE_GRACE_DAYS
+        value: "3"
+      - key: CHECK_INTERVAL_MINUTES
+        value: "30"
+
+      # Days each instalment payment buys.
+      - key: INSTALLMENT_PERIOD_DAYS
+        value: "30"
+
+      # Uncomment BOTH of these once you are on the paid plan, so licences
+      # survive restarts. Remember to also uncomment the disk: section below.
       # - key: DATA_DIR
       #   value: /data
+
+    # Requires the paid plan. Without a disk, licences are lost on restart.
     # disk:
     #   name: license-data
     #   mountPath: /data

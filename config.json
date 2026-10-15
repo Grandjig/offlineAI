@@ -1,6 +1,28 @@
 {
   "admin_password": "ChangeThisToYourAdminPassword123",
+
   "trial_days": 14,
+
   "license_file": "licenses.json",
-  "port": 3000
+  "port": 3000,
+
+  "device_lock": true,
+  "offline_grace_days": 3,
+  "check_interval_minutes": 30,
+
+  "installment_period_days": 30,
+  "installment_count": 12,
+
+  "search_provider": "searxng",
+  "searxng_url": "",
+  "searxng_token": "",
+
+  "websearch_enabled": true,
+  "websearch_trial_enabled": false,
+  "websearch_quota_monthly": 300,
+
+  "websearch_results": 4,
+  "websearch_snippet_chars": 320,
+  "websearch_timeout_ms": 12000,
+  "websearch_cache_minutes": 30
 }

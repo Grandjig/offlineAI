@@ -6,10 +6,11 @@
 <title>Offline AI — License Manager</title>
 <style>
   :root { --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3; --muted:#8b949e;
-          --accent:#58a6ff; --green:#3fb950; --red:#f85149; --yellow:#d29922; --orange:#db6d28; }
+          --accent:#58a6ff; --green:#3fb950; --red:#f85149; --yellow:#d29922; --orange:#db6d28;
+          --purple:#a371f7; }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:-apple-system,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-  .container { max-width:1280px; margin:0 auto; padding:24px; }
+  .container { max-width:1400px; margin:0 auto; padding:24px; }
   h1 { font-size:22px; font-weight:600; }
   h2 { font-size:13px; font-weight:600; margin-bottom:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
   .hidden { display:none !important; }
@@ -18,56 +19,66 @@
   .login-card h1 { margin-bottom:6px; }
   .login-card p { color:var(--muted); font-size:13px; margin-bottom:20px; }
   .login-card input { width:100%; margin-bottom:12px; }
-  .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; flex-wrap:wrap; gap:12px; }
-  .header .actions { display:flex; gap:8px; }
-  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
-  .stat { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:16px; }
-  .stat .num { font-size:28px; font-weight:700; }
+  .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+  .header .actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .banner { border-radius:8px; padding:11px 14px; font-size:13px; margin-bottom:18px; line-height:1.5; }
+  .banner.warn { background:rgba(210,153,34,.12); border:1px solid rgba(210,153,34,.4); color:#f0d38a; }
+  .banner.bad  { background:rgba(248,81,73,.12); border:1px solid rgba(248,81,73,.4); color:#ffb4ae; }
+  .banner.ok   { background:rgba(63,185,80,.1); border:1px solid rgba(63,185,80,.35); color:#9be3a6; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+  .stat { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+  .stat .num { font-size:26px; font-weight:700; }
   .stat .lbl { font-size:12px; color:var(--muted); margin-top:2px; }
   .stat.green .num { color:var(--green); } .stat.yellow .num { color:var(--yellow); }
   .stat.red .num { color:var(--red); } .stat.blue .num { color:var(--accent); }
-  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:20px; }
+  .stat.purple .num { color:var(--purple); }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:18px; }
   input,select { background:var(--bg); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:6px; font-size:14px; width:100%; }
-  input:focus { outline:none; border-color:var(--accent); }
-  .form-row { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
-  .form-row input { flex:1; min-width:160px; }
-  button { background:#21262d; color:var(--text); border:1px solid var(--border); padding:8px 14px; border-radius:6px; font-size:13px; cursor:pointer; white-space:nowrap; }
+  input:focus,select:focus { outline:none; border-color:var(--accent); }
+  .form-row { display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; align-items:center; }
+  .form-row input, .form-row select { flex:1; min-width:150px; }
+  button { background:#21262d; color:var(--text); border:1px solid var(--border); padding:8px 13px; border-radius:6px; font-size:13px; cursor:pointer; white-space:nowrap; }
   button:hover { background:#30363d; }
   button.primary { background:#238636; border-color:#2ea043; color:#fff; }
   button.primary:hover { background:#2ea043; }
   button.danger { background:#b62324; border-color:#da3633; color:#fff; }
   button.danger:hover { background:#da3633; }
-  button.small { padding:4px 10px; font-size:12px; }
+  button.warnbtn { background:#9e6a03; border-color:#d29922; color:#fff; }
+  button.warnbtn:hover { background:#d29922; }
+  button.small { padding:4px 9px; font-size:11.5px; }
   .table-wrap { overflow-x:auto; }
   table { width:100%; border-collapse:collapse; font-size:13px; }
-  th { text-align:left; padding:10px 12px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--border); font-size:12px; }
-  td { padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:middle; }
+  th { text-align:left; padding:9px 10px; color:var(--muted); font-weight:600; border-bottom:1px solid var(--border); font-size:11.5px; text-transform:uppercase; letter-spacing:.3px; }
+  td { padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
   tr:last-child td { border-bottom:none; }
   tr:hover td { background:rgba(88,166,255,.04); }
-  code { background:var(--bg); padding:2px 6px; border-radius:4px; font-size:12px; cursor:pointer; }
-  .badge { padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+  code { background:var(--bg); padding:2px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-family:ui-monospace,Menlo,Consolas,monospace; }
+  .badge { padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; }
   .badge.trial { background:rgba(210,153,34,.15); color:var(--yellow); }
-  .badge.paid { background:rgba(63,185,80,.15); color:var(--green); }
+  .badge.installment { background:rgba(163,113,247,.18); color:var(--purple); }
+  .badge.owned { background:rgba(63,185,80,.15); color:var(--green); }
   .badge.expired { background:rgba(248,81,73,.15); color:var(--red); }
-  .badge.revoked { background:rgba(248,81,73,.25); color:var(--red); }
-  .activity-item { display:flex; gap:12px; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .badge.disabled { background:rgba(248,81,73,.28); color:var(--red); }
+  .activity-item { display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); font-size:12.5px; }
   .activity-item:last-child { border-bottom:none; }
-  .activity-item .time { color:var(--muted); white-space:nowrap; font-size:12px; }
-  .dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
-  .dot.allow { background:var(--green); } .dot.deny { background:var(--red); }
-  .dot.trial { background:var(--yellow); } .dot.admin { background:var(--accent); }
-  .dot.blocked { background:var(--orange); } .dot.register { background:var(--accent); }
-  #toast { position:fixed; bottom:24px; right:24px; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 18px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:99; }
+  .activity-item .time { color:var(--muted); white-space:nowrap; font-size:11px; }
+  .dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; background:var(--muted); }
+  .dot.allow{background:var(--green)} .dot.deny{background:var(--red)} .dot.trial{background:var(--yellow)}
+  .dot.admin{background:var(--accent)} .dot.blocked{background:var(--orange)} .dot.register{background:var(--accent)}
+  .dot.bind{background:var(--purple)}
+  #toast { position:fixed; bottom:24px; right:24px; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 18px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:99; max-width:420px; }
   #toast.show { opacity:1; }
   #toast.ok { border-color:var(--green); } #toast.err { border-color:var(--red); }
-  .grid-2 { display:grid; grid-template-columns:2fr 1fr; gap:20px; }
-  @media (max-width:900px) { .grid-2 { grid-template-columns:1fr; } }
+  .grid-2 { display:grid; grid-template-columns:1fr 340px; gap:18px; align-items:start; }
+  @media (max-width:1000px) { .grid-2 { grid-template-columns:1fr; } }
   .muted { color:var(--muted); font-size:12px; }
+  .actions-cell { display:flex; gap:5px; flex-wrap:wrap; max-width:420px; }
+  .keyrow { display:flex; gap:8px; align-items:center; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:10px; }
+  .keyrow code { font-size:15px; letter-spacing:.5px; flex:1; }
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="loginView">
   <div class="login-card">
     <h1>🛡️ Offline AI</h1>
@@ -78,35 +89,79 @@
   </div>
 </div>
 
-<!-- MAIN -->
 <div id="mainView" class="hidden">
   <div class="container">
     <div class="header">
       <h1>🛡️ Offline AI — License Manager</h1>
       <div class="actions">
-        <button onclick="exportBackup()">⬇️ Backup</button>
+        <button onclick="refresh()">↻ Refresh</button>
+        <button onclick="exportBackup()">⬇️ Download backup</button>
+        <button onclick="document.getElementById('restoreFile').click()">⬆️ Restore backup</button>
+        <input type="file" id="restoreFile" class="hidden" accept=".json" onchange="restoreBackup(this)">
         <button onclick="logout()">Sign out</button>
       </div>
     </div>
 
+    <div id="hostBanner"></div>
+
     <div class="stats">
-      <div class="stat blue"><div class="num" id="stTotal">0</div><div class="lbl">Total licenses</div></div>
-      <div class="stat yellow"><div class="num" id="stTrials">0</div><div class="lbl">Active trials</div></div>
-      <div class="stat red"><div class="num" id="stExpired">0</div><div class="lbl">Expired</div></div>
-      <div class="stat green"><div class="num" id="stPaid">0</div><div class="lbl">Paid</div></div>
+      <div class="stat blue"><div class="num" id="stTotal">0</div><div class="lbl">Customers</div></div>
+      <div class="stat yellow"><div class="num" id="stTrials">0</div><div class="lbl">On free trial</div></div>
+      <div class="stat purple"><div class="num" id="stInstalment">0</div><div class="lbl">On instalment</div></div>
+      <div class="stat green"><div class="num" id="stOwned">0</div><div class="lbl">Owned</div></div>
+      <div class="stat red"><div class="num" id="stDead">0</div><div class="lbl">Expired / off</div></div>
     </div>
 
     <div class="grid-2">
       <div>
         <div class="card">
-          <h2>🔑 Licenses</h2>
+          <h2>💰 Issue a product key</h2>
           <div class="form-row">
-            <input id="searchBox" placeholder="🔍 Search key, customer, email…" oninput="renderLicenses()">
+            <input id="newCustomer" placeholder="Customer name">
+            <input id="newPhone" placeholder="Phone / WhatsApp (optional)">
+            <input id="newEmail" placeholder="Email (optional)">
+          </div>
+          <div class="form-row">
+            <select id="newPlan" onchange="syncPlanFields()">
+              <option value="installment">Instalment plan (expires, renew as they pay)</option>
+              <option value="trial">Trial key (expires)</option>
+              <option value="owned">Owned outright (never expires)</option>
+            </select>
+            <input id="newDays" type="number" value="30" style="max-width:130px" title="Days of access">
+            <select id="newWeb" style="max-width:210px" title="Web search for this customer">
+              <option value="default">Web search: default</option>
+              <option value="on">Web search: on</option>
+              <option value="off">Web search: off</option>
+            </select>
+            <button class="primary" onclick="createKey()">Create key</button>
+          </div>
+          <div id="keyResult" class="hidden">
+            <div class="keyrow">
+              <code id="keyValue" onclick="copyKey()" title="Click to copy"></code>
+              <button class="small" onclick="copyKey()">Copy</button>
+            </div>
+            <p class="muted" style="margin-top:8px">Send this to the customer. They paste it into the Offline AI window when asked.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>🔑 Customers &amp; licenses</h2>
+          <div class="form-row">
+            <input id="searchBox" placeholder="🔍 Search key, name, phone or email…" oninput="renderLicenses()">
+            <select id="filterBox" onchange="renderLicenses()" style="max-width:190px">
+              <option value="">All statuses</option>
+              <option value="trial">Free trial</option>
+              <option value="installment">Instalment</option>
+              <option value="owned">Owned</option>
+              <option value="expired">Expired</option>
+              <option value="disabled">Switched off</option>
+            </select>
           </div>
           <div class="table-wrap">
             <table>
               <thead><tr>
-                <th>Key</th><th>Customer</th><th>Status</th><th>Expires</th><th>Last seen</th><th>Actions</th>
+                <th>Key</th><th>Customer</th><th>Status</th><th>Access until</th>
+                <th>Paid</th><th>Last seen</th><th>Web search</th><th>Actions</th>
               </tr></thead>
               <tbody id="licTable"></tbody>
             </table>
@@ -116,14 +171,12 @@
 
       <div>
         <div class="card">
-          <h2>➕ New trial</h2>
-          <input id="newCustomer" placeholder="Customer name" style="margin-bottom:8px">
-          <input id="newEmail" placeholder="Email (optional)" style="margin-bottom:10px">
-          <button class="primary" style="width:100%" onclick="createTrial()">Create trial license</button>
+          <h2>📋 Activity</h2>
+          <div id="activityList" style="max-height:560px;overflow-y:auto"></div>
         </div>
         <div class="card">
-          <h2>📋 Activity</h2>
-          <div id="activityList" style="max-height:400px;overflow-y:auto"></div>
+          <h2>⚙️ Server settings</h2>
+          <div id="cfgList" class="muted" style="line-height:1.9"></div>
         </div>
       </div>
     </div>
@@ -135,8 +188,9 @@
 <script>
 let TOKEN = sessionStorage.getItem('aiAdminToken') || '';
 let LICENSES = {};
-
+let CFG = {};
 const SERVER = location.origin;
+
 const api = (path, opts = {}) => fetch(SERVER + path, {
   ...opts,
   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN, ...(opts.headers || {}) }
@@ -146,8 +200,9 @@ function toast(msg, ok = true) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'show ' + (ok ? 'ok' : 'err');
-  setTimeout(() => t.className = '', 3000);
+  setTimeout(() => { t.className = ''; }, 3500);
 }
+function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
 async function login() {
   const pw = document.getElementById('pwInput').value;
@@ -163,7 +218,6 @@ async function login() {
     document.getElementById('loginErr').classList.remove('hidden');
   }
 }
-
 function logout() {
   TOKEN = '';
   sessionStorage.removeItem('aiAdminToken');
@@ -174,35 +228,80 @@ function logout() {
 async function refresh() {
   if (!TOKEN) return;
   try {
-    const [licRes, actRes] = await Promise.all([api('/admin/licenses'), api('/admin/activity')]);
+    const [licRes, actRes, cfgRes] = await Promise.all([
+      api('/admin/licenses'), api('/admin/activity'), api('/admin/config')
+    ]);
     if (licRes.status === 401) { logout(); return; }
     LICENSES = await licRes.json();
+    CFG = await cfgRes.json();
     renderStats();
     renderLicenses();
     renderActivity(await actRes.json());
+    renderConfig();
   } catch (e) { console.error(e); }
 }
 
 function renderStats() {
   const all = Object.values(LICENSES);
+  const count = (s) => all.filter(l => l.status === s).length;
   document.getElementById('stTotal').textContent = all.length;
-  document.getElementById('stTrials').textContent = all.filter(l => l.status === 'trial').length;
-  document.getElementById('stExpired').textContent = all.filter(l => l.status === 'expired').length;
-  document.getElementById('stPaid').textContent = all.filter(l => l.status === 'paid').length;
+  document.getElementById('stTrials').textContent = count('trial');
+  document.getElementById('stInstalment').textContent = count('installment');
+  document.getElementById('stOwned').textContent = count('owned');
+  document.getElementById('stDead').textContent = count('expired') + count('disabled');
 }
 
-function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function renderConfig() {
+  const el = document.getElementById('cfgList');
+  const lockTxt = CFG.device_lock ? 'ON — one key, one computer' : 'OFF — key works anywhere';
+  el.innerHTML =
+    `Device lock: <strong>${esc(lockTxt)}</strong><br>` +
+    `Trial length: <strong>${esc(CFG.trial_days)} days</strong><br>` +
+    `Offline grace: <strong>${esc(CFG.offline_grace_days)} days</strong><br>` +
+    `Checks in every <strong>${esc(CFG.check_interval_minutes)} min</strong><br>` +
+    `Instalment: <strong>${esc(CFG.installment_period_days)} days</strong> × ${esc(CFG.installment_count)}<br>` +
+    `Password source: <strong>${CFG.using_env_password ? 'ADMIN_PASSWORD env' : 'config.json'}</strong><br>` +
+    (CFG.websearch
+      ? `Web search: <strong>${CFG.websearch.configured ? (CFG.websearch.enabled ? 'ON' : 'OFF') : 'not set up'}</strong>` +
+        (CFG.websearch.configured
+          ? `<br>Backend: <code>${esc(CFG.websearch.backend)}</code><br>` +
+            `Trials get it: <strong>${CFG.websearch.trial_enabled ? 'yes' : 'no'}</strong><br>` +
+            `Monthly quota: <strong>${CFG.websearch.quota_monthly > 0 ? esc(CFG.websearch.quota_monthly) + ' per customer' : 'unlimited'}</strong><br>` +
+            `Results per search: <strong>${esc(CFG.websearch.results)}</strong>`
+          : '')
+      : '');
+
+  const b = document.getElementById('hostBanner');
+  if (!CFG.persistent_data_dir) {
+    b.innerHTML = `<div class="banner bad"><strong>Data is not on a permanent disk.</strong><br>
+      Licenses live in <code>${esc(CFG.data_dir)}</code> on the host. On Render's free plan that folder is wiped
+      whenever the service restarts or redeploys — you would lose every customer's license.<br>
+      Fix: add a Render Disk mounted at <code>/data</code> and set the env var <code>DATA_DIR=/data</code>.
+      Until then, use <strong>Download backup</strong> regularly and <strong>Restore backup</strong> to recover.</div>`;
+  } else {
+    b.innerHTML = `<div class="banner ok">Data directory <code>${esc(CFG.data_dir)}</code> is on a permanent disk. Licenses survive restarts.</div>`;
+  }
+  if (!CFG.using_env_password) {
+    b.innerHTML += `<div class="banner warn">Admin password is read from <code>config.json</code> in your repo.
+      Set an <code>ADMIN_PASSWORD</code> environment variable on your host instead, and never commit the real one.</div>`;
+  }
+  if (!CFG.websearch || !CFG.websearch.configured) {
+    b.innerHTML += `<div class="banner warn"><strong>Web search is not set up.</strong>
+      No <code>SEARXNG_URL</code> is configured, so customers see no 🌐 Web button and asking about
+      anything after the AI's training date gets an out-of-date answer.<br>
+      Fix: run the SearXNG in the <code>searxng/</code> folder and set <code>SEARXNG_URL</code> on this host.
+      See <code>searxng/README.md</code>.</div>`;
+  }
+}
 
 function fmtDate(d) {
   if (!d) return '—';
-  const diff = (new Date(d) - new Date()) / 86400000;
-  const days = Math.ceil(diff);
+  const days = Math.ceil((new Date(d) - new Date()) / 86400000);
   let extra = '';
-  if (days > 0 && days <= 3) extra = ` <span style="color:var(--yellow)">(${days}d left)</span>`;
-  else if (days <= 0) extra = ' <span style="color:var(--red)">(gone)</span>';
+  if (days > 0 && days <= 5) extra = ` <span style="color:var(--yellow)">(${days}d left)</span>`;
+  else if (days <= 0) extra = ' <span style="color:var(--red)">(passed)</span>';
   return esc(d) + extra;
 }
-
 function fmtSeen(d) {
   if (!d) return '<span class="muted">never</span>';
   const hrs = (Date.now() - new Date(d)) / 3600000;
@@ -213,95 +312,232 @@ function fmtSeen(d) {
 
 function renderLicenses() {
   const q = (document.getElementById('searchBox').value || '').toLowerCase();
+  const f = document.getElementById('filterBox').value;
   const tbody = document.getElementById('licTable');
   tbody.innerHTML = '';
 
-  const entries = Object.entries(LICENSES).filter(([key, l]) =>
-    !q || key.toLowerCase().includes(q) || (l.customer || '').toLowerCase().includes(q) || (l.email || '').toLowerCase().includes(q)
-  );
+  const entries = Object.entries(LICENSES).filter(([key, l]) => {
+    if (f && l.status !== f) return false;
+    if (!q) return true;
+    return key.toLowerCase().includes(q)
+      || (l.customer || '').toLowerCase().includes(q)
+      || (l.email || '').toLowerCase().includes(q)
+      || (l.phone || '').toLowerCase().includes(q);
+  });
 
   if (entries.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">No licenses yet. Create a trial to get started.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center;padding:22px">No licenses match.</td></tr>';
     return;
   }
 
   for (const [key, l] of entries) {
     const tr = document.createElement('tr');
-    const actions = [];
-    if (l.status === 'paid') {
-      actions.push(`<button class="small" onclick="markUnpaid('${key}')">Mark unpaid</button>`);
-    } else if (l.status === 'trial') {
-      actions.push(`<button class="small primary" onclick="markPaid('${key}')">Mark paid</button>`);
-      actions.push(`<button class="small" onclick="extend('${key}')">+14d</button>`);
-    } else if (l.status === 'expired') {
-      actions.push(`<button class="small primary" onclick="markPaid('${key}')">Mark paid</button>`);
-      actions.push(`<button class="small" onclick="extend('${key}')">+14d</button>`);
-    } else if (l.status === 'revoked') {
-      actions.push(`<button class="small primary" onclick="unrevoke('${key}')">Restore</button>`);
+    // Every button carries its action in data attributes and is wired up by a
+    // single listener on the table (see rowAction below). Building
+    // onclick="..." strings around a licence key always ends the same way: a
+    // key is quoted JSON, the quotes close the attribute early, and the button
+    // quietly stops working. That is exactly what had happened to all of them.
+    const kb = esc(key);
+    const btn = (label, action, cls) =>
+      `<button class="small ${cls || ''}" data-act="${action}" data-key="${kb}">${label}</button>`;
+    const a = [];
+    if (l.status === 'disabled') a.push(btn('Turn ON', 'enable', 'primary'));
+    else a.push(btn('Turn OFF', 'disable', 'danger'));
+    a.push(btn('+7d', 'add7'));
+    a.push(btn('+days', 'adddays'));
+    a.push(btn('Set date', 'setdate'));
+    a.push(btn('Record payment', 'payment'));
+    if (l.status !== 'owned') a.push(btn('Mark owned', 'own', 'primary'));
+    if (l.machineId) a.push(btn('Unlock device', 'unlock', 'warnbtn'));
+    a.push(btn('Delete', 'delete', 'danger'));
+
+    const paid = (l.installments && l.installments.length) ? l.installments.length : 0;
+    const planTag = l.plan ? `<span class="muted">${esc(l.plan)}</span>` : '';
+    const dev = l.machineId ? `<div class="muted" title="${esc(l.machineId)}">locked</div>` : '<div class="muted">unlocked</div>';
+
+    // "default" means the customer follows the server-wide setting, so the two
+    // switches (this customer, and everyone) cannot silently contradict.
+    const searchUp = !!(CFG.websearch && CFG.websearch.configured);
+    const live = l.status === 'trial' || l.status === 'installment' || l.status === 'owned';
+    let searchTxt;
+    if (!live) searchTxt = '<span class="muted">no access</span>';
+    else if (l.webSearch === true) searchTxt = '<span style="color:var(--green)">ON</span> <span class="muted">just this one</span>';
+    else if (l.webSearch === false) searchTxt = '<span style="color:var(--red)">OFF</span> <span class="muted">just this one</span>';
+    else if (!searchUp) searchTxt = '<span class="muted">not set up</span>';
+    else if (l.webSearchAllowed) searchTxt = '<span style="color:var(--green)">on</span> <span class="muted">default</span>';
+    else if (l.plan === 'trial' && !CFG.websearch.trial_enabled) searchTxt = '<span class="muted">off (trials excluded)</span>';
+    else searchTxt = '<span class="muted">off (server-wide)</span>';
+    if (l.webSearchAllowed && l.searchQuota > 0) {
+      searchTxt += `<div class="muted" title="Searches this month">${esc(l.searchUsed || 0)} of ${esc(l.searchQuota)} used</div>`;
     }
-    actions.push(`<button class="small danger" onclick="del('${key}')">Delete</button>`);
+    const webActions = [];
+    if (searchUp) {
+      if (l.webSearch === true) webActions.push(btn('Web default', 'webdefault'));
+      else webActions.push(btn('Web ON', 'webon'));
+      if (l.webSearch !== false) webActions.push(btn('Web OFF', 'weboff'));
+      if ((l.searchUsed || 0) > 0) webActions.push(btn('Reset count', 'webreset'));
+    }
 
     tr.innerHTML = `
-      <td><code onclick="navigator.clipboard.writeText('${key}')" title="Click to copy">${key.slice(0,14)}…</code></td>
-      <td>${esc(l.customer)}${l.email ? '<br><span class="muted">' + esc(l.email) + '</span>' : ''}</td>
-      <td><span class="badge ${l.status}">${l.status}</span></td>
-      <td>${l.status === 'paid' ? '<span class="muted">never</span>' : fmtDate(l.expires)}</td>
-      <td>${fmtSeen(l.lastSeen)}</td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">${actions.join('')}</td>`;
+      <td><code data-copy="${kb}" title="${esc(key)}">${esc(key.slice(0, 16))}…</code></td>
+      <td>${esc(l.customer) || '<span class="muted">—</span>'}
+          ${l.phone ? '<br><span class="muted">' + esc(l.phone) + '</span>' : ''}
+          ${l.email ? '<br><span class="muted">' + esc(l.email) + '</span>' : ''}
+          <br>${planTag}</td>
+      <td><span class="badge ${esc(l.status)}">${esc(l.statusLabel || l.status)}</span></td>
+      <td>${l.perpetual ? '<span style="color:var(--green)">never expires</span>' : fmtDate(l.expires)}</td>
+      <td>${paid ? paid + ' ×' : '<span class="muted">—</span>'}</td>
+      <td>${fmtSeen(l.lastSeen)}${dev}</td>
+      <td>${searchTxt}<div class="actions-cell">${webActions.join('')}</div></td>
+      <td><div class="actions-cell">${a.join('')}</div></td>`;
     tbody.appendChild(tr);
   }
 }
 
 function renderActivity(events) {
   const el = document.getElementById('activityList');
-  if (!events || events.length === 0) {
-    el.innerHTML = '<p class="muted">No activity yet.</p>';
-    return;
-  }
+  if (!events || events.length === 0) { el.innerHTML = '<p class="muted">No activity yet.</p>'; return; }
   el.innerHTML = events.map(e => `
     <div class="activity-item">
       <div class="dot ${esc(e.type)}"></div>
-      <div>
-        <div>${esc(e.detail)}</div>
-        <div class="time">${new Date(e.time).toLocaleString()}</div>
-      </div>
+      <div><div>${esc(e.detail)}</div><div class="time">${new Date(e.time).toLocaleString()}</div></div>
     </div>`).join('');
 }
 
-// ---- Actions ----
 async function act(path, body, okMsg) {
   const res = await api(path, { method: 'POST', body: JSON.stringify(body) });
-  const data = await res.json();
-  toast(okMsg, data.success !== false);
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  toast(data.success === false || data.error ? ('Failed: ' + (data.error || data.message || res.status)) : okMsg, !(data.success === false || data.error));
   refresh();
 }
 
-const markPaid = (k) => act('/admin/update', { licenseKey: k, updates: { paid: true, status: 'paid' } }, 'Marked as paid ✓');
-const markUnpaid = (k) => act('/admin/update', { licenseKey: k, updates: { paid: false, status: 'trial' } }, 'Marked as trial');
-const extend = (k) => {
-  const d = new Date(); d.setDate(d.getDate() + 14);
-  act('/admin/update', { licenseKey: k, updates: { expires: d.toISOString().split('T')[0], status: 'trial', paid: false } }, 'Extended 14 days ✓');
-};
-const unrevoke = (k) => act('/admin/revoke', { licenseKey: k, revoke: false }, 'License restored ✓');
+// One listener for the whole table. Buttons say what they are and which key
+// they belong to in data attributes, so nothing has to be quoted or escaped
+// into an HTML attribute.
+document.getElementById('licTable').addEventListener('click', function (e) {
+  const copy = e.target.closest('[data-copy]');
+  if (copy) {
+    navigator.clipboard.writeText(copy.getAttribute('data-copy')).catch(() => {});
+    toast('Key copied');
+    return;
+  }
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  rowAction(b.getAttribute('data-act'), b.getAttribute('data-key'));
+});
 
-function del(k) {
-  if (!confirm('Delete ' + k + '?\n\nThe customer will be blocked on next launch. Their machine can also sign up for a NEW trial afterwards.')) return;
-  act('/admin/delete', { licenseKey: k }, 'License deleted');
+function rowAction(action, key) {
+  const mins = CFG.check_interval_minutes;
+  const grace = CFG.offline_grace_days;
+  switch (action) {
+    case 'enable':
+      act('/admin/enable', { licenseKey: key, enabled: true }, 'Switched back on');
+      break;
+    case 'disable':
+      if (confirm('Switch OFF access for ' + key + '?\n\nTheir copy stops working within ' + mins +
+                  ' minutes (or ' + grace + ' days if they are offline).')) {
+        act('/admin/enable', { licenseKey: key, enabled: false }, 'Access switched OFF');
+      }
+      break;
+    case 'add7':
+      act('/admin/add-days', { licenseKey: key, days: 7 }, 'Added 7 days');
+      break;
+    case 'adddays': {
+      const n = parseInt(prompt('Add how many days?', '30') || '0', 10);
+      if (n) act('/admin/add-days', { licenseKey: key, days: n }, 'Days added');
+      break;
+    }
+    case 'setdate': setExpiry(key); break;
+    case 'payment': recordPayment(key); break;
+    case 'own':
+      if (confirm('Mark as fully OWNED - access never expires?')) {
+        act('/admin/own', { licenseKey: key }, 'Marked as owned');
+      }
+      break;
+    case 'unlock':
+      if (confirm('Unlock this key so it can be activated on a different computer?')) {
+        act('/admin/reset-device', { licenseKey: key }, 'Device unlocked');
+      }
+      break;
+    case 'delete':
+      if (confirm('Delete ' + key + '?\n\nThey are blocked on next check. This cannot be undone.')) {
+        act('/admin/delete', { licenseKey: key }, 'Deleted');
+      }
+      break;
+    case 'webon':
+      act('/admin/websearch', { licenseKey: key, enabled: true }, 'Web search ON for this customer');
+      break;
+    case 'webdefault':
+      act('/admin/websearch', { licenseKey: key, enabled: 'default' }, 'Back to the default for this customer');
+      break;
+    case 'weboff':
+      if (confirm('Switch web search OFF for ' + key + '?\n\nTheir chat window loses the lookup button on next start.')) {
+        act('/admin/websearch', { licenseKey: key, enabled: false }, 'Web search OFF for this customer');
+      }
+      break;
+    case 'webreset':
+      if (confirm('Reset the search count for ' + key + ' back to zero?')) {
+        act('/admin/websearch', { licenseKey: key, resetUsage: true }, 'Search usage reset');
+      }
+      break;
+  }
 }
 
-async function createTrial() {
-  const customer = document.getElementById('newCustomer').value;
-  const email = document.getElementById('newEmail').value;
-  if (!customer.trim()) { toast('Enter a customer name', false); return; }
-  const res = await api('/api/create-trial', { method: 'POST', body: JSON.stringify({ customer, email }) });
+function setExpiry(k) {
+  const cur = LICENSES[k] && LICENSES[k].expires ? LICENSES[k].expires : '';
+  const d = prompt('Set access-until date (YYYY-MM-DD).\nLeave empty to make it expire immediately.', cur);
+  if (d === null) return;
+  act('/admin/set-expiry', { licenseKey: k, expires: d }, 'Expiry set');
+}
+
+function recordPayment(k) {
+  const amount = prompt('Amount received (leave empty if you just want to extend access):', '');
+  if (amount === null) return;
+  const days = prompt('Extend access by how many days?', String(CFG.installment_period_days || 30));
+  if (days === null) return;
+  const l = LICENSES[k] || {};
+  const confirmOwn = (parseInt(days, 10) >= 900) ? true : false;
+  act('/admin/payment', { licenseKey: k, amount: amount, days: parseInt(days, 10) || 30, note: 'Instalment payment' },
+      'Payment recorded, access extended');
+  if (confirmOwn) act('/admin/own', { licenseKey: k }, 'Marked as owned');
+}
+
+async function createKey() {
+  const customer = document.getElementById('newCustomer').value.trim();
+  if (!customer) { toast('Enter a customer name', false); return; }
+  const body = {
+    customer,
+    phone: document.getElementById('newPhone').value.trim(),
+    email: document.getElementById('newEmail').value.trim(),
+    plan: document.getElementById('newPlan').value,
+    days: parseInt(document.getElementById('newDays').value, 10) || 30,
+    perpetual: document.getElementById('newPlan').value === 'owned',
+  };
+  const web = document.getElementById('newWeb').value;
+  if (web === 'on') body.webSearch = true;
+  if (web === 'off') body.webSearch = false;
+  const res = await api('/admin/create', { method: 'POST', body: JSON.stringify(body) });
   const data = await res.json();
   if (data.success) {
-    toast('Created: ' + data.licenseKey, true);
+    document.getElementById('keyResult').classList.remove('hidden');
+    document.getElementById('keyValue').textContent = data.licenseKey;
+    navigator.clipboard.writeText(data.licenseKey).catch(() => {});
+    toast('Key created and copied: ' + data.licenseKey, true);
     document.getElementById('newCustomer').value = '';
+    document.getElementById('newPhone').value = '';
     document.getElementById('newEmail').value = '';
-    navigator.clipboard.writeText(data.licenseKey);
     refresh();
-  } else toast('Error creating trial', false);
+  } else toast('Could not create key', false);
+}
+function copyKey() {
+  const v = document.getElementById('keyValue').textContent;
+  navigator.clipboard.writeText(v);
+  toast('Copied: ' + v);
+}
+function syncPlanFields() {
+  const v = document.getElementById('newPlan').value;
+  document.getElementById('newDays').style.display = v === 'owned' ? 'none' : '';
 }
 
 function exportBackup() {
@@ -310,16 +546,32 @@ function exportBackup() {
     .then(b => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(b);
-      a.download = 'license_backup.json';
+      a.download = 'license_backup_' + new Date().toISOString().slice(0, 10) + '.json';
       a.click();
       toast('Backup downloaded ✓');
     });
 }
 
-// Auto-refresh every 20s
-setInterval(refresh, 20000);
+function restoreBackup(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!confirm('Restore from "' + file.name + '"?\n\nThis REPLACES all licenses currently on the server.')) { input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = async () => {
+    let data;
+    try { data = JSON.parse(reader.result); } catch (e) { toast('That file is not valid JSON', false); return; }
+    const res = await api('/admin/restore', { method: 'POST', body: JSON.stringify(data) });
+    const out = await res.json();
+    if (out.success) { toast('Restored ' + out.licenses + ' licenses'); refresh(); }
+    else toast('Restore failed: ' + (out.error || res.status), false);
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
 
-// If token exists, skip login
+setInterval(refresh, 20000);
+syncPlanFields();
+
 if (TOKEN) {
   document.getElementById('loginView').classList.add('hidden');
   document.getElementById('mainView').classList.remove('hidden');
@@ -328,4 +580,3 @@ if (TOKEN) {
 </script>
 </body>
 </html>
-

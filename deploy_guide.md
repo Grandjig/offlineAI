@@ -1,116 +1,119 @@
-# License Server Deployment Guide
+# Licence Server — Deployment Guide
 
-## Where should you host it?
-
-### ❌ Why NOT Vercel
-Vercel runs "serverless" functions — there is **no permanent hard drive**. Your
-`licenses.json` would be wiped on every deploy/restart, meaning every customer
-loses their license. Vercel only works if you rewrite the server to use a cloud
-database (Vercel KV, Postgres), which adds cost and complexity. Skip Vercel.
-
-### ✅ Option 1: Render (recommended, easiest)
-- Free tier works for testing (data lost on redeploys)
-- **$7/mo "Starter" plan** = permanent disk, never lose licenses → use this
-  once you have paying customers
-- Deploys straight from GitHub in ~2 minutes
-
-### ✅ Option 2: Your own PC + Cloudflare Tunnel (zero cost, full control)
-- Run `node server.js` on your PC
-- Expose it to the internet free with Cloudflare Tunnel
-- Data lives on your machine forever, backup = copy one folder
-- Best if you're hands-on and want $0/month
-
-### ✅ Option 3: Railway ($5/mo, simple alternative to Render)
+The server is already deployed. This guide is for redeploying it, moving it, or
+running a copy locally for testing.
 
 ---
 
-## Option 1: Render — step by step
+## The one thing that matters: where the data lives
 
-1. **Push the `license_server` folder to a GitHub repo** (private is fine).
+Licences are stored in `licenses.json`, `machines.json` and `activity.json`, in
+the folder named by `DATA_DIR` (default: the app folder).
 
-2. **Change the admin password FIRST** — edit `config.json`:
-   ```json
-   { "admin_password": "YourRealSecretPassword", ... }
-   ```
+| Host | Is the data safe? |
+|---|---|
+| Render **free** | **No.** The disk is wiped on every restart or deploy, and the service sleeps when idle. You *will* lose licences. |
+| Render **Starter (~$7/mo) + Disk** | Yes. This is what you want once you are charging people. |
+| Railway / Fly with a volume | Yes. |
+| Your own PC + Cloudflare Tunnel | Yes, and free. Data is a folder you can copy. |
 
-3. Go to [render.com](https://render.com) → New → Web Service → connect your repo.
+The dashboard shows a red banner whenever your data is not on a permanent disk,
+so this is hard to forget. Whatever you choose, click **Download backup** after
+any day you add customers.
 
-4. Settings:
+---
+
+## Option 1 — Render (already set up)
+
+1. Push the `license_server` folder to a private GitHub repo.
+2. Render → New → Web Service → connect the repo.
+3. Settings:
    - Root Directory: `license_server`
    - Build Command: `npm install`
    - Start Command: `node server.js`
+4. Environment variables (Render → Environment):
 
-5. Deploy. Your dashboard will be at:
-   `https://your-app.onrender.com/admin`
+   | Key | Value |
+   |---|---|
+   | `ADMIN_PASSWORD` | **your real password — set this** |
+   | `TRIAL_DAYS` | `14` |
+   | `DEVICE_LOCK` | `true` |
+   | `OFFLINE_GRACE_DAYS` | `3` |
+   | `CHECK_INTERVAL_MINUTES` | `30` |
+   | `INSTALLMENT_PERIOD_DAYS` | `30` |
+   | `SEARXNG_URL` | web search backend — see `searxng/README.md`. Leave unset and customers simply never see the 🌐 Web button. |
+   | `WEBSEARCH_ENABLED` | `true` (ignored while `SEARXNG_URL` is unset) |
+   | `WEBSEARCH_TRIAL_ENABLED` | `false` |
+   | `WEBSEARCH_QUOTA_MONTHLY` | `300` |
 
-6. **For permanent storage** (do this once you have real customers):
-   - Upgrade to Starter ($7/mo)
-   - Add a Disk (mount path `/data`)
-   - Set env var `DATA_DIR=/data`
+5. **For permanent storage** (do this before you have paying customers):
+   - Upgrade the instance to Starter
+   - Add a Disk, mount path `/data`
+   - Add env var `DATA_DIR` = `/data`
 
-7. Put your real URL into `wrapper.ps1`:
-   ```powershell
-   $SERVER_URL = "https://your-app.onrender.com"
-   ```
-
-> Free tier note: Render sleeps inactive free services after 15 min — the
-> customer's first check after idle may take ~30 extra seconds. The client
-> scripts treat timeouts as "use local clock", so trials keep working.
-
----
-
-## Option 2: Your PC + Cloudflare Tunnel — step by step
-
-1. Install Node.js from https://nodejs.org
-
-2. In `license_server` folder, run:
-   ```
-   npm install
-   node server.js
-   ```
-
-3. Install cloudflared: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
-
-4. Create a free Cloudflare account, then run:
-   ```
-   cloudflared tunnel --url http://localhost:3000
-   ```
-
-5. Cloudflare gives you a URL like
-   `https://random-name.trycloudflare.com` — put that in `wrapper.ps1`:
-   ```powershell
-   $SERVER_URL = "https://random-name.trycloudflare.com"
-   ```
-
-6. (Optional) Buy a nice domain and map it in the Cloudflare dashboard.
-
-**Data safety:** everything lives in the `license_server` folder
-(`licenses.json`, `machines.json`, `activity.json`). Copy that folder to back up.
+`render.yaml` in this folder describes all of the above, so you can also deploy
+it as a Render Blueprint.
 
 ---
 
-## Day-to-day usage
+## Option 2 — Your own PC + Cloudflare Tunnel (free, permanent)
 
-### Start the server
 ```
+npm install
 node server.js
+cloudflared tunnel --url http://localhost:3000
 ```
-Dashboard: `http://localhost:3000/admin` (or your public URL + `/admin`)
 
-### Your dashboard lets you
-- ➕ **Create trial licenses** for customers (key auto-copies to clipboard)
-- 💚 **Mark paid** when they transfer money
-- ⏰ **Extend +14d** if a customer needs more time
-- 🚫 **Revoke** instantly (customer blocked within 24h via watchdog)
-- 🗑️ **Delete** a license entirely
-- 📋 **Activity feed** — see live check-ins, blocked attempts, admin actions
-- 🕐 **Last seen** — know when each customer's machine last checked in
-- ⬇️ **Backup** — downloads everything as one JSON file
+Put the `https://….trycloudflare.com` URL into `client/wrapper.ps1`
+(`$SERVER_URL`) and rebuild the zip. Back up by copying the `license_server`
+folder.
 
-### Anti-cheat built in
-- **One trial per machine** — hardware-based ID, deleting files won't reset it
-- **Machine binding** — a license key only works on the machine that activated it
-- **Trial reset attempts are logged** — you'll see them in the activity feed
+> Note: a `trycloudflare.com` URL changes every time you restart the tunnel.
+> For anything permanent, buy a domain and map it in Cloudflare, or use Render
+> with a disk.
+
+---
+
+## Changing the server a customer's copy talks to
+
+Two places, both in `client/`:
+
+- `wrapper.ps1` → `$SERVER_URL = '...'`
+- `watchdog.ps1` → the `$ServerUrl` default
+
+For testing, you can avoid editing them at all by setting the
+`OFFLINEAI_SERVER` environment variable before launching:
+
+```powershell
+$env:OFFLINEAI_SERVER = 'http://localhost:3000'
+.\wrapper.ps1
+```
+
+---
+
+## Running it locally
+
+```bash
+npm install
+
+# a throwaway instance on port 3999, so you never touch live data
+ADMIN_PASSWORD=testpass123 DATA_DIR=./test-data PORT=3999 node server.js
+
+# in another window — exercises 22 behaviours end to end
+ADMIN_PASSWORD=testpass123 BASE=http://localhost:3999 node smoke-test.js
+```
+
+For the web search half, point the server at a running SearXNG and use the other
+suite:
+
+```bash
+SEARXNG_URL=http://127.0.0.1:8080 ADMIN_PASSWORD=testpass123 DATA_DIR=./test-data PORT=3999 node server.js
+
+# in another window — 25 behaviours covering search, quotas and the relevance guard
+BASE=http://localhost:3999 node websearch-test.js
+```
+
+Delete `test-data/` when you are done.
 
 ---
 
@@ -118,22 +121,35 @@ Dashboard: `http://localhost:3000/admin` (or your public URL + `/admin`)
 
 | Endpoint | Method | Auth | Purpose |
 |---|---|---|---|
-| `/api/register` | POST | none | Client registers its trial (1 per machine) |
-| `/api/check` | POST | none | Validate a license |
-| `/api/create-trial` | POST | admin | Create trial manually |
-| `/admin/licenses` | GET | admin | List licenses + last seen |
-| `/admin/activity` | GET | admin | Recent activity feed |
-| `/admin/update` | POST | admin | Update license (mark paid etc.) |
-| `/admin/revoke` | POST | admin | Revoke / restore |
-| `/admin/delete` | POST | admin | Delete a license |
-| `/admin/backup` | GET | admin | Download full JSON backup |
+| `/api/health` | GET | none | Is it alive, and what settings is it using |
+| `/api/register` | POST | none | Customer's first run — grants the one-per-machine trial |
+| `/api/activate` | POST | none | Activate with a product key you sold |
+| `/api/check` | POST | none | Routine validity check (launcher + watchdog) |
+| `/api/websearch` | POST | licence key | **Web search** for the chat window. Needs a valid, active licence, an allowed customer, and remaining quota. Returns normalised results, or `ok:false` when nothing relevant came back. CORS-open because the chat page is a local file. |
+| `/admin/licenses` | GET | admin | Every licence with computed status and last seen |
+| `/admin/activity` | GET | admin | Recent events |
+| `/admin/config` | GET | admin | Active settings |
+| `/admin/create` | POST | admin | Issue a product key |
+| `/admin/enable` | POST | admin | **Kill switch** — on/off |
+| `/admin/set-expiry` | POST | admin | Set an exact end date, or make it permanent |
+| `/admin/add-days` | POST | admin | Extend (or shorten) by N days |
+| `/admin/payment` | POST | admin | Record an instalment and extend access |
+| `/admin/own` | POST | admin | Mark fully paid — permanent |
+| `/admin/reset-device` | POST | admin | Unlock the key for a new computer |
+| `/admin/update` | POST | admin | Edit customer details / notes / plan |
+| `/admin/websearch` | POST | admin | Per-customer web search: `enabled` (`true` / `false` / `"default"`), `quota`, `resetUsage` |
+| `/admin/delete` | POST | admin | Remove a licence |
+| `/admin/backup` | GET | admin | Download everything as JSON |
+| `/admin/restore` | POST | admin | Upload that JSON to recover after a wipe |
 
-Admin auth = send header `Authorization: Bearer YOUR_PASSWORD`
+Admin auth is the header `Authorization: Bearer <ADMIN_PASSWORD>`.
 
 ---
 
-## Security checklist before going live
-- [ ] Change `admin_password` in `config.json`
-- [ ] Use HTTPS (Render and Cloudflare Tunnel both give you this free)
-- [ ] Keep the GitHub repo private
-- [ ] Download a backup (`⬇️ Backup` button) after any important change
+## Security checklist
+
+- [ ] `ADMIN_PASSWORD` set as an environment variable on the host
+- [ ] `DATA_DIR` on a permanent disk
+- [ ] Repo private
+- [ ] Backup downloaded after any busy day
+- [ ] SearXNG reachable only from this server (same host, or behind the token proxy in `searxng/Caddyfile`) — its JSON API is on and its rate limiter is off by design
