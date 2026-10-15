@@ -21,14 +21,25 @@
 use_default_settings: true
 
 engines:
-  # These scrape Google/Startpage/Ecosia HTML and get a CAPTCHA on sight.
-  # google_cse (the one that works) is a separate engine and stays on.
+  # Scrapers that CAPTCHA / throttle on sight (measured from a cloud IP).
   - name: google
     disabled: true
   - name: startpage
     disabled: true
   - name: ecosia
     disabled: true
+  - name: brave
+    disabled: true
+  - name: duckduckgo
+    disabled: true
+  # Bing and Yahoo are OFF in SearXNG's defaults but actually answer from a
+  # datacenter IP. Turning them on is what makes a plain query return results.
+  - name: bing
+    disabled: false
+  - name: yahoo
+    disabled: false
+  - name: mojeek
+    disabled: false
 
 server:
   secret_key: "k9Qm2Xv7Tz4RbNpL6wYs3HdF8JcAeU1g"
