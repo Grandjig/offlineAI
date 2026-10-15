@@ -66,21 +66,69 @@ const backupDir = path.join(dataDir, 'backups');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
 
-// ---------- Storage: atomic writes + rolling on-disk snapshots ----------
+const EMPTY_OBJ = {};
+
+// ---------- Storage ----------
+// DATABASE_URL set   -> licences live in a free Postgres (e.g. Neon), so they
+//                       survive restarts and redeploys on hosts whose own disk
+//                       is wiped (Render's free plan does exactly that).
+// DATABASE_URL unset -> the original JSON files next to the server.
+// Everything else goes through loadJson/saveJson, so nothing downstream cares
+// which mode is in use.
+const usePg = !!process.env.DATABASE_URL;
+let pool = null;
+const mem = { licenses: {}, machines: {}, activity: [] };
+const KEY_BY_PATH = new Map([
+  [licensesPath, 'licenses'],
+  [machinesPath, 'machines'],
+  [activityPath, 'activity'],
+]);
+
 function loadJson(p, fallback) {
+  const key = KEY_BY_PATH.get(p);
+  if (usePg && key) return mem[key];
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { return fallback; }
 }
 function saveJson(p, data) {
+  const key = KEY_BY_PATH.get(p);
+  if (usePg && key) {
+    mem[key] = data;
+    pool.query(
+      'insert into offlineai_store(key, value, updated) values($1, $2, now()) ' +
+      'on conflict (key) do update set value = excluded.value, updated = now()',
+      [key, JSON.stringify(data)]
+    ).catch(e => console.error(`[store] saving ${key} failed: ${e.message}`));
+    return;
+  }
   const tmp = p + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
   fs.renameSync(tmp, p);
 }
 
-const EMPTY_OBJ = {};
-
-if (!fs.existsSync(licensesPath)) saveJson(licensesPath, EMPTY_OBJ);
-if (!fs.existsSync(machinesPath)) saveJson(machinesPath, EMPTY_OBJ);
-if (!fs.existsSync(activityPath)) saveJson(activityPath, []);
+async function initStorage() {
+  if (usePg) {
+    const { Pool } = require('pg');
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: /sslmode=disable/.test(process.env.DATABASE_URL) ? false : { rejectUnauthorized: false },
+    });
+    await pool.query('create table if not exists offlineai_store (key text primary key, value jsonb, updated timestamptz)');
+    const { rows } = await pool.query('select key, value from offlineai_store');
+    for (const r of rows) {
+      if (r.key === 'licenses') mem.licenses = r.value || {};
+      else if (r.key === 'machines') mem.machines = r.value || {};
+      else if (r.key === 'activity') mem.activity = Array.isArray(r.value) ? r.value : [];
+    }
+    activity = mem.activity;
+    console.log(`  storage         : Postgres (${rows.length} row(s) loaded)`);
+    return;
+  }
+  if (!fs.existsSync(licensesPath)) saveJson(licensesPath, EMPTY_OBJ);
+  if (!fs.existsSync(machinesPath)) saveJson(machinesPath, EMPTY_OBJ);
+  if (!fs.existsSync(activityPath)) saveJson(activityPath, []);
+  activity = loadJson(activityPath, []);
+  console.log('  storage         : local files');
+}
 
 // ---------- Helpers ----------
 const today = () => new Date().toISOString().split('T')[0];
@@ -99,7 +147,7 @@ function genKey(prefix) {
   return (prefix ? prefix + '-' : '') + grouped;
 }
 
-let activity = loadJson(activityPath, []);
+let activity = [];   // filled in by initStorage()
 function logEvent(type, detail) {
   activity.unshift({ time: nowIso(), type, detail });
   if (activity.length > 300) activity = activity.slice(0, 300);
@@ -384,6 +432,7 @@ app.get('/api/health', (req, res) => {
     ok: true,
     service: 'Offline AI License Server',
     version: 3,
+    storage: usePg ? 'postgres' : 'files',
     server_time: nowIso(),
     device_lock: config.device_lock,
     trial_days: config.trial_days,
@@ -888,9 +937,11 @@ app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'adm
 app.get('/', (req, res) => res.json({ service: 'Offline AI License Server', version: 3, admin: '/admin' }));
 
 // ---------- Start ----------
+initStorage().then(function () {
 app.listen(config.port, function () {
   console.log(`Offline AI license server v3 on port ${config.port}`);
   console.log(`  data dir        : ${dataDir}`);
+  console.log(`  storage         : ${usePg ? 'Postgres (DATABASE_URL)' : 'local files'}`);
   console.log(`  device lock     : ${config.device_lock ? 'ON' : 'OFF'}`);
   console.log(`  trial           : ${config.trial_days} days`);
   console.log(`  offline grace   : ${config.offline_grace_days} days`);
@@ -901,4 +952,8 @@ app.listen(config.port, function () {
   if (config.admin_password === 'ChangeThisToYourAdminPassword123' || config.admin_password === 'CHANGE-ME-BEFORE-YOU-DEPLOY') {
     console.warn('  !! ADMIN PASSWORD IS STILL THE DEFAULT - change it before you have customers');
   }
+});
+}).catch(function (e) {
+  console.error('Startup failed:', e.message);
+  process.exit(1);
 });
