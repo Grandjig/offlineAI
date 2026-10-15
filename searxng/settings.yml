@@ -1,0 +1,54 @@
+# SearXNG for Offline AI - the "look it up" button.
+#
+# WHY THIS FILE IS SO SHORT
+# -------------------------
+# SearXNG ships a keyless "google_cse" engine that queries Google's Custom
+# Search endpoint directly. Measured against a set of real questions it gave
+# correct, current answers, while the scraped engines (bing, duckduckgo,
+# brave, qwant, mojeek) were CAPTCHA'd, suspended, or returning keyword
+# nonsense - "capital of France" came back as "Bet9ja Agents: sports betting
+# software" from bing.
+#
+# An earlier version of this file copied a keep_only list that had been tuned
+# from a different IP at a different time. That list EXCLUDED google_cse and
+# left only the broken scrapers, which is exactly how you end up with a model
+# confidently answering from junk context.
+#
+# So: keep the default engine set (that is what includes google_cse), and only
+# switch off the scrapers that CAPTCHA immediately and waste request time.
+# If you ever want the short-list behaviour back, disable engines here rather
+# than using keep_only, so nothing good gets dropped by accident.
+use_default_settings: true
+
+engines:
+  # These scrape Google/Startpage/Ecosia HTML and get a CAPTCHA on sight.
+  # google_cse (the one that works) is a separate engine and stays on.
+  - name: google
+    disabled: true
+  - name: startpage
+    disabled: true
+  - name: ecosia
+    disabled: true
+
+server:
+  secret_key: "k9Qm2Xv7Tz4RbNpL6wYs3HdF8JcAeU1g"
+  # The licence server calls this over the internal docker network, machine to
+  # machine, so the bot limiter is off. Do NOT expose this container straight
+  # to the internet with the limiter off and JSON enabled: keep it internal,
+  # or put a token-protected proxy in front of it.
+  limiter: false
+  bind_address: "0.0.0.0"
+  port: 8080
+
+search:
+  # Required for the licence server to read results as JSON. Most PUBLIC
+  # instances switch this off, which is why we self-host.
+  formats:
+    - html
+    - json
+  default_lang: "en"
+  safe_search: 1
+  max_page: 1
+
+ui:
+  static_use_hash: true

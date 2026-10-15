@@ -1,0 +1,49 @@
+# SearXNG for Offline AI.
+#
+#   docker compose up -d
+#
+# It listens on this machine only (127.0.0.1). The bot limiter is off and the
+# JSON API is on, which is fine for machine-to-machine use on the same box and
+# NOT fine on the open internet - see README.md before you expose it.
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: offlineai-searxng
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      SEARXNG_BASE_URL: "http://127.0.0.1:8080/"
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "2"
+
+  # Only needed if the licence server is on a different machine from this one
+  # (for example Render). It puts a long random token in front of the search
+  # API so nobody else can use your instance as a free search proxy.
+  # Put your own token in Caddyfile, then: docker compose --profile exposed up -d
+  proxy:
+    image: caddy:2-alpine
+    container_name: offlineai-search-proxy
+    profiles: ["exposed"]
+    restart: unless-stopped
+    depends_on:
+      - searxng
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "2"
+
+volumes:
+  caddy_data:

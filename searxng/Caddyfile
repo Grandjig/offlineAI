@@ -1,0 +1,25 @@
+# Only used with the "exposed" profile, when the licence server is on a
+# different machine from SearXNG.
+#
+# 1. Replace the domain and the token below with your own.
+# 2. Put the same token in the licence server's SEARXNG_TOKEN.
+# 3. Point SEARXNG_URL at https://search.example.com
+#
+# Anything without the token gets a 403, so your instance cannot be borrowed
+# as somebody else's free search API.
+
+search.example.com {
+	@allowed header Authorization "Bearer REPLACE-WITH-A-LONG-RANDOM-TOKEN"
+
+	handle @allowed {
+		reverse_proxy searxng:8080
+	}
+
+	handle {
+		respond "Not authorised." 403
+	}
+
+	header {
+		-Server
+	}
+}
