@@ -1,7 +1,7 @@
 {
   "admin_password": "ChangeThisToYourAdminPassword123",
 
-  "trial_days": 14,
+  "trial_days": 7,
 
   "license_file": "licenses.json",
   "port": 3000,
@@ -17,7 +17,7 @@
   "searxng_url": "",
   "searxng_token": "",
 
-  "websearch_enabled": true,
+  "websearch_enabled": false,
   "websearch_trial_enabled": false,
   "websearch_quota_monthly": 300,
 
